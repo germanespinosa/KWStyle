@@ -12,12 +12,19 @@
 
 =========================================================================*/
 #include "kwsParser.h"
+#include <iostream>
 
 namespace kws {
 
 /** Check if the variables implementation of the class are correct */
+typedef std::pair<std::string,long int> VarDetections;
+
+std::vector<VarDetections> FindVariables(std::string & buffer);
+
+
 bool Parser::CheckVariables(const char* regEx)
 {
+    
   m_TestsDone[VARS] = true;
   m_TestsDescription[VARS] = "ivars implementation should match regular expression: ";
   m_TestsDescription[VARS] += regEx;
@@ -27,68 +34,35 @@ bool Parser::CheckVariables(const char* regEx)
 
   kwssys::RegularExpression regex(regEx);
 
-  // We first read the .h if any
-  std::string headerfile = kwssys::SystemTools::GetFilenamePath(m_Filename.c_str());
-  headerfile += "/";
-  headerfile += kwssys::SystemTools::GetFilenameWithoutExtension(m_Filename.c_str());
-  headerfile += ".h";
+  std::vector<VarDetections> ivars = FindVariables(m_BufferNoComment);
 
-  if(!kwssys::SystemTools::FileExists(headerfile.c_str()))
-    {
-    return false;
-    }
-
-  // We open the file
-  std::ifstream file;
-  file.open(headerfile.c_str(), std::ios::binary | std::ios::in);
-  if(!file.is_open())
-    {
-    std::cout << "Cannot open file: " << headerfile.c_str() << std::endl;
-    return 1;
-    }
-
-  file.seekg(0,std::ios::end);
-  size_t fileSize = file.tellg();
-  file.seekg(0,std::ios::beg);
-
-  char* buf = new char[fileSize+1];
-  file.read(buf,fileSize);
-  buf[fileSize] = 0; 
-  std::string buffer(buf);
-  buffer.resize(fileSize);
-  delete [] buf;
-  
-  file.close();
-  
-  this->ConvertBufferToWindowsFileType(buffer);
-  buffer = this->RemoveComments(buffer.c_str());
-  
-  // Construct the list of variables to check
-  typedef std::pair<std::string,long int> PairType;
-  std::vector<PairType> ivars;
-  size_t pos = 0;
-  while(pos != std::string::npos)
-    {
-    std::string var = this->FindVariable(buffer,pos+1,buffer.size(),pos);
-    if(var.size()>0)
-      {
-      std::string correct = "";
-      for(size_t i=0;i<var.size();i++)
+  std::vector<VarDetections>::const_iterator it = ivars.begin();
+  while(it != ivars.end())
+  {
+    std::string var = (*it).first;
+    long int pos =(*it).second;
+	//std::cout << "v:" << var << "- pos:" << pos << " - line: " << this->GetLineNumber(pos,true) << "\n";	
+	it++;
+	
+	
+      if(!regex.find(var))
         {
-        if(var[i] != '*')
-          {
-          correct+=var[i];
-          }
+        Error error;
+        error.line = this->GetLineNumber(pos,true);
+        error.line2 = error.line;
+        error.number = VARS;
+        error.description = "variable (" + var + ") doesn't match regular expression";
+        m_ErrorList.push_back(error);
+        hasError = true;
         }
-      PairType p;
-      p.first = correct;
-      p.second = this->GetLineNumber(pos,true)-1;
-      ivars.push_back(p);
-      }
-    }
+	
+  }
+  
+  
+  
+  return hasError;
 
   // Do the checking
-  std::vector<PairType>::const_iterator it = ivars.begin();
   while(it != ivars.end())
     {
     std::string v = (*it).first;
@@ -175,13 +149,115 @@ bool Parser::CheckVariables(const char* regEx)
   return !hasError;
 }
 
+bool findChar (const char* haystack ,char needle)
+{
+	while (*haystack && *haystack !=needle) 
+	{
+		haystack++;
+	}
+	return *haystack;
+}
+
+bool isLetter(char c)
+{
+	return !findChar("&|!:{}();,\n\r #=+-*/%\"\\[]\'<>^",c);
+}
+
+bool isBreak(char c)
+{
+	return findChar("{}();,=\"",c);
+}
+
+bool isWord (std::string  buffer)
+{
+	if (buffer.length()==0) return false;
+	if (buffer.at(0)>='0' && buffer.at(0)<='9') return false;
+	if (buffer.find("struct") != std::string::npos) return false;
+	if (buffer.find("enum") != std::string::npos) return false;
+	if (buffer.find("const") != std::string::npos) return false;
+	if (buffer.find("include") != std::string::npos) return false;
+	if (buffer.find("define") != std::string::npos) return false;
+	if (buffer.find("NULL") != std::string::npos) return false;
+	if (buffer.find("true") != std::string::npos) return false;
+	if (buffer.find("false") != std::string::npos) return false;
+	if (buffer.find("return") != std::string::npos) return false;
+	return true;
+}
+
+#define  FWD if (end<buffer.length()-1) end++; else return result
+
+std::vector<VarDetections>  FindVariables(std::string & buffer)
+{
+	size_t start=0, end=0;
+	bool lastIsWord=false;
+	bool isVariable=false;
+    std::vector<VarDetections> result;
+	std::string variable;
+	while (start < buffer.length())
+	{
+		isVariable=false;
+		while (isLetter(buffer.at(end))) 
+		{
+			FWD;
+		}
+		variable = buffer.substr(start,end-start);
+		if (isWord(variable))
+		{
+			if (!lastIsWord)
+			{
+				lastIsWord=true;
+			}else
+			{
+				isVariable=true;
+				
+				lastIsWord =  false;
+			}
+		}
+		else lastIsWord =  false;
+
+		while (!isLetter(buffer.at(end))) 
+		{
+			if (buffer.at(end)=='(')  isVariable=false;
+			if (isBreak(buffer.at(end)))  lastIsWord=false;
+
+			if (buffer.at(end)=='\"') 
+			{
+				FWD;
+				while (buffer.at(end)!='"') FWD;
+			}
+			if (buffer.at(end)=='\'') 
+			{
+				FWD;
+				while (buffer.at(end)!='\'')  FWD;
+			}
+			if (buffer.at(end)=='<') 
+			{
+				FWD;
+				while (buffer.at(end)!='>') FWD;
+			}
+			FWD;
+		}
+		if (isVariable)  
+		{
+			VarDetections var;
+			var.first = variable;
+			var.second =  start; 
+			result.push_back(var);
+		}
+		start=end;
+	}
+	return result;
+}
+
 /** Find the first ivar in the source code */
 std::string Parser::FindVariable(std::string & buffer, size_t start, size_t end,size_t & pos)
 {
+  size_t lastLineStart = 0;
   size_t posSemicolon = buffer.find(";",start);
   while(posSemicolon != std::string::npos && posSemicolon<end)
     {
     // We try to find the word before that
+    //std::cout<<"line: "<<buffer.substr(lastLineStart,posSemicolon+lastLineStart)<<" : fin\n";
     size_t i = posSemicolon-1;
     bool inWord = true;
     bool first = false;
@@ -262,7 +338,8 @@ std::string Parser::FindVariable(std::string & buffer, size_t start, size_t end,
         return ivar;
         }
       }
-
+	std::cout<<"line: "<<buffer.substr(lastLineStart+1,posSemicolon-lastLineStart)<<" : fin\n";
+	lastLineStart=posSemicolon;
     posSemicolon = buffer.find(";",posSemicolon+1);
     }
 

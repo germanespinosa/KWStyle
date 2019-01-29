@@ -300,6 +300,14 @@ bool Parser::CheckIndent(IndentType itype,
             }
           }
 
+        if ((*it=='}' || *it=='{')&& currentIndent+size==wanted)
+        {
+            returnError=false;
+        }
+        if (currentLine.substr(currentIndent+1,4).rfind("case",0)==0 && currentIndent+size==wanted)
+        {
+            returnError=false;
+        }
         if(returnError)
           {
           Error error;
@@ -596,6 +604,15 @@ bool Parser::CheckIndent(IndentType itype,
           {
           reportError = false;
           }
+
+        if (reportError)
+        {
+          if ((*it == '}' || *it == '{' ) && currentIndent+size== wantedIndent)
+          {
+              reportError = false;
+          }
+        }
+  
 
         if(reportError)
           {
@@ -975,7 +992,6 @@ bool Parser::InitIndentation()
     size_t posCase = m_BufferNoComment.find("case",openningBracket);
     bool firstCase = true;
     size_t previousCase = openningBracket;
-
     while(posCase!= std::string::npos && posCase<closingBracket)
       {
       // Check if we don't have any switch statement inside
@@ -997,14 +1013,14 @@ bool Parser::InitIndentation()
           }
         else
           {
-          localindtemp.current = -1;
+          localindtemp.current = 0; //updated by German Espinosa
           }
         localindtemp.after = 0;
 
         m_IdentPositionVector.push_back(localindtemp);
 
         size_t column = m_BufferNoComment.find(':',posCase+3);
-        // Make sure that we are not checing '::'
+        // Make sure that we are not checking '::'
         while(column+1<m_BufferNoComment.size()
           && m_BufferNoComment[column+1]==':')
           {
