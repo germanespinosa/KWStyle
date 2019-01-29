@@ -40,34 +40,7 @@ bool Parser::CheckStruct(const char* regEx,bool alignment)
 
   while(posStruct != std::string::npos)
     {
-        
-    size_t structNameStart = posStruct + 6;
-    while (m_BufferNoComment[++structNameStart]==' ');
-
-    size_t structNameLenght = 1;
-    while (m_BufferNoComment[structNameStart+structNameLenght]!=' ' 
-            && m_BufferNoComment[structNameStart+structNameLenght]!='\n'
-            && m_BufferNoComment[structNameStart+structNameLenght]!='\r'
-            && m_BufferNoComment[structNameStart+structNameLenght]!='{' )
-    {
-        structNameLenght++;
-    }
-    
-    std::string structName = m_BufferNoComment.substr(structNameStart, structNameLenght);
-    
-    //std::cout << structName << "\n";    
-    
-    if(!regex.find(structName))
-    {
-        Error error;
-        error.line = this->GetLineNumber(posStruct,true);
-        error.line2 = error.line;
-        error.number = SVAR_REGEX;
-        error.description = "Struct (" + structName + ") doesn't match regular expression " + regEx;
-        m_ErrorList.push_back(error);
-        hasError = true;
-    }
-/*    size_t begin = posStruct;
+    size_t begin = posStruct;
     while(posStruct<m_BufferNoComment.size())
       {
       if(m_BufferNoComment[posStruct] == '{')
