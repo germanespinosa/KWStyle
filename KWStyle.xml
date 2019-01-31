@@ -27,6 +27,7 @@
   <Indent>
     <type>SPACE</type>
     <size>4</size>
+    <directivePosition>BEGINNIG</directivePosition>
     <noHeader>false</noHeader>
     <allowBlockLine>false</allowBlockLine>
   </Indent>

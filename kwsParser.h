@@ -39,6 +39,13 @@ typedef enum
 
 typedef enum
   {
+  BEGINNING,
+  INDENTED,
+  FREE
+  } DirectivePosition;
+
+typedef enum
+  {
   LINE_LENGTH = 0,
   IVAR_PUBLIC,
   IVAR_REGEX,
@@ -217,6 +224,7 @@ public:
    *  then the header is not checked for indent*/
   bool CheckIndent(IndentType,
                    unsigned long size,
+                   DirectivePosition directivePosition=BEGINNING,
                    bool doNotCheckHeader=false,
                    bool allowBlockLine = false,
                    unsigned int maxLength = 81,

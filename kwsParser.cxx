@@ -42,6 +42,18 @@ Parser::~Parser()
 {
 }
 
+std::string comma_value(std::string value,int index)
+{
+    size_t poss=0,pose=0;
+    for (size_t i =0 ;i<index;i++)
+    {
+        poss=value.find(',',poss+1)+1;
+    }
+    pose=value.find(',',poss+1);
+    if (pose ==std::string::npos ) pose=value.length();
+    return value.substr(poss,pose-poss);
+}
+
  /** To be able to use std::sort we provide the < operator */
 bool Parser::operator<(const Parser& a) const
 {
@@ -361,6 +373,12 @@ bool Parser::Check(const char* name, const char* value)
    else if(!strcmp(name,"Indent"))
     {
     std::string val = value;
+/*    std::cout << val << "-////" << comma_value(val,0) << "////-" << 
+    "-////" << comma_value(val,1) << "////-" << 
+    "-////" << comma_value(val,2) << "////-" <<
+    "-////" << comma_value(val,3) << "////-" <<
+    "-////" << comma_value(val,4) << "////-" <<
+    "-////" << comma_value(val,5) << "////-" << name;*/
     long pos = static_cast<long>(val.find(",",0));
     if(pos == -1)
       {
@@ -400,7 +418,13 @@ bool Parser::Check(const char* name, const char* value)
       {
       itype = kws::TAB;
       }
-    this->CheckIndent(itype,atoi(v2.c_str()),header,blockline);
+      
+      DirectivePosition dp=BEGINNING;
+      if(!strcmp(comma_value(val,2).c_str(),"INDENTED"))
+            dp=INDENTED;
+      if(!strcmp(comma_value(val,2).c_str(),"FREE"))
+            dp=FREE;
+    this->CheckIndent(itype,atoi(v2.c_str()),dp,header,blockline);
     }
 
   else if(!strcmp(name,"Namespace"))
