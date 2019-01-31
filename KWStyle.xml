@@ -1,0 +1,41 @@
+<?xml <?xml version="1.0" encoding="utf-8"?>
+<Description>
+  <!-- Text -->
+  <LineLength>80</LineLength> <!-- max -->
+  <EmptyLines>2</EmptyLines> <!-- max -->
+  <EndOfFileNewLine>true</EndOfFileNewLine>
+  <Tabs>1</Tabs>
+  <!-- C/C++ -->
+  <VariablePerLine>1</VariablePerLine> <!-- max -->
+  <StatementPerLine>1</StatementPerLine> <!-- max -->
+  <Struct>
+    <regex>^[A-Z]([a-z_]+)$</regex>
+  </Struct>
+  <Variables>
+    <regex>^([a-z_]+)$</regex>
+  </Variables>
+  <Functions>
+    <regex>^([a-z_]+)$</regex>
+    <length>150</length>
+  </Functions><!-- length = number of lines -->
+  <Comments>
+   <begin>/*</begin>
+   <middle> * </middle>
+   <end> */</end>
+   <checkMissingComment>false</checkMissingComment>
+  </Comments>
+  <Indent>
+    <type>SPACE</type>
+    <size>4</size>
+    <noHeader>false</noHeader>
+    <allowBlockLine>false</allowBlockLine>
+  </Indent>
+  <StatementPerLine>
+    <maxNumber>1</maxNumber>
+    <checkInline>0</checkInline> 
+  </StatementPerLine>
+  <Operator>
+    <spaceBefore>1</spaceBefore>
+    <spaceAfter>1</spaceAfter>
+  </Operator>   
+</Description>
