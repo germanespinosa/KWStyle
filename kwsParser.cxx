@@ -54,6 +54,18 @@ std::string comma_value(std::string value,int index)
     return value.substr(poss,pose-poss);
 }
 
+size_t comma_value_count(std::string value)
+{
+    size_t pos=0;
+    size_t i =0;
+    while (pos !=std::string::npos )
+    {
+        pos=value.find(',',pos+1);
+        i++;
+    }
+    return i;
+}
+
  /** To be able to use std::sort we provide the < operator */
 bool Parser::operator<(const Parser& a) const
 {
@@ -373,58 +385,51 @@ bool Parser::Check(const char* name, const char* value)
    else if(!strcmp(name,"Indent"))
     {
     std::string val = value;
+     //std::cout << val << "-////" << comma_value_count(val) << "////-\n";
 /*    std::cout << val << "-////" << comma_value(val,0) << "////-" << 
     "-////" << comma_value(val,1) << "////-" << 
     "-////" << comma_value(val,2) << "////-" <<
     "-////" << comma_value(val,3) << "////-" <<
     "-////" << comma_value(val,4) << "////-" <<
     "-////" << comma_value(val,5) << "////-" << name;*/
-    long pos = static_cast<long>(val.find(",",0));
-    if(pos == -1)
+    size_t values_count=comma_value_count(val);
+    if( values_count < 3)
       {
       std::cout << "Indent not defined correctly" << std::endl;
       return false;
       }
-    std::string v1 = val.substr(0,pos);
-    long int pos1 = static_cast<long int>(val.find(",",pos+1));
-    if(pos1 == -1)
+
+    size_t isize = atoi(comma_value(val,1).c_str());
+    if( isize==0 )
       {
-      std::cout << "Indent not defined correctly" << std::endl;
+      std::cout << "Indent size not defined (must be bigger than zero)" << std::endl;
       return false;
       }
-    std::string v2 = val.substr(pos+1,pos1-pos-1);
-    pos = static_cast<long>(val.find(",",pos1+1));
-    if(pos == -1)
-      {
-      std::cout << "Indent not defined correctly" << std::endl;
-      return false;
-      }
-    std::string v3 = val.substr(pos1+1,pos-pos1-1);
-    std::string v4 = val.substr(pos+1,val.length()-pos-1);
+
     bool header = false;
-    if(!strcmp(v3.c_str(),"true"))
+    if(values_count>=4 && !strcmp(comma_value(val,3).c_str(),"true"))
       {
       header = true;
       }
     bool blockline = false;
-    if(!strcmp(v4.c_str(),"true"))
+    if(values_count>=5 && !strcmp(comma_value(val,4).c_str(),"true"))
       {
       blockline = true;
       }
 
     IndentType itype = kws::SPACE;
 
-    if(!strcmp(v1.c_str(),"TAB"))
+    if(!strcmp(comma_value(val,0).c_str(),"TAB"))
       {
       itype = kws::TAB;
       }
       
-      DirectivePosition dp=BEGINNING;
-      if(!strcmp(comma_value(val,2).c_str(),"INDENTED"))
-            dp=INDENTED;
-      if(!strcmp(comma_value(val,2).c_str(),"FREE"))
-            dp=FREE;
-    this->CheckIndent(itype,atoi(v2.c_str()),dp,header,blockline);
+    DirectivePosition dp=BEGINNING;
+    if(!strcmp(comma_value(val,2).c_str(),"INDENTED"))
+        dp=INDENTED;
+    if(!strcmp(comma_value(val,2).c_str(),"FREE"))
+        dp=FREE;
+    this->CheckIndent(itype,isize,dp,header,blockline);
     }
 
   else if(!strcmp(name,"Namespace"))

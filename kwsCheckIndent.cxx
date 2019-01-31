@@ -14,7 +14,7 @@
 #include "kwsParser.h"
 
 #include <string.h>
-
+#include <sstream>
 namespace kws {
 
 #define ALIGN_LEFT -99999
@@ -157,7 +157,7 @@ bool Parser::CheckIndent(IndentType itype,
   
   bool hasError = false;
   int expected=0, current=0;
-  std::stringstream ss ( m_BufferNoComment);
+  std::stringstream ss (m_BufferNoComment);
   std::string l;
   int line_number = 0;
   while(std::getline(ss,l,'\n'))
