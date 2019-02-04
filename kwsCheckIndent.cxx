@@ -102,7 +102,7 @@ std::string clean_line(std::string line)
 	while (pos<rt.length())
 	{
 		if( rt.at(pos) == '\"' ) active = !active;
-		if (active) result +=  rt.at(pos);
+		if (active && rt.at(pos) != '\"') result +=  rt.at(pos);
 		pos++;
 	}
 	pos=0;
@@ -112,7 +112,7 @@ std::string clean_line(std::string line)
 	while (pos<rt.length())
 	{
 		if( rt.at(pos) == '\'') active = !active;
-		if (active) result +=  rt.at(pos);
+		if (active && rt.at(pos) != '\'') result +=  rt.at(pos);
 		pos++;
 	}
 	return result;
@@ -143,6 +143,19 @@ bool is_directive(std::string line)
     return false;
 }
 
+bool if_exception ( std::string line)
+{
+	return (line.find ("if") !=std::string::npos && line.find (';') ==std::string::npos);		
+}
+bool case_exception_begin ( std::string line)
+{
+	return (line.find ("case") !=std::string::npos && line.find (':') !=std::string::npos);		
+}
+bool case_exception_end ( std::string line)
+{
+	return (line.find ("break") !=std::string::npos && line.find (';') !=std::string::npos);		
+}
+
 /** Check the indent size */
 bool Parser::CheckIndent(IndentType itype,
                          unsigned long size,
@@ -160,6 +173,8 @@ bool Parser::CheckIndent(IndentType itype,
   std::stringstream ss (m_BufferNoComment);
   std::string l;
   int line_number = 0;
+  int last_line_if_exception=0;
+  int case_exception=0;
   while(std::getline(ss,l,'\n'))
   {
 	line_number++;
@@ -200,9 +215,12 @@ bool Parser::CheckIndent(IndentType itype,
     }
     else
     {
-        if (actual!=expected	&& actual!=expected+indent_change(line) * size)
+		//std::cout << actual << '\t' << expected << "\t" << last_line_if_exception << "\t" << indent_change(line) << "\t" << abs(actual-expected) << ":" << line <<"\n";
+        if ( (actual!=expected	&& 
+		       actual!=expected+indent_change(line) * size   &&
+		       abs(actual-expected)  > last_line_if_exception * size) )
         {
-           hasError=true;
+          hasError=true;
           Error error;
           error.line = line_number;
           error.line2 = error.line;
@@ -220,6 +238,8 @@ bool Parser::CheckIndent(IndentType itype,
           delete [] localval;
           m_ErrorList.push_back(error);
         }
+		if (last_line_if_exception) last_line_if_exception--;
+		last_line_if_exception += if_exception(line);
         expected+=indent_change(line) * size;
     }
   }
