@@ -18,12 +18,6 @@
     <regex>^([a-z_]+)$</regex>
     <length>150</length>
   </Functions><!-- length = number of lines -->
-  <Comments>
-   <begin>/*</begin>
-   <middle> * </middle>
-   <end> */</end>
-   <checkMissingComment>false</checkMissingComment>
-  </Comments>
   <Indent>
     <type>SPACE</type>
     <size>4</size>
