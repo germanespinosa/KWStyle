@@ -179,6 +179,7 @@ bool Parser::CheckIndent(IndentType itype,
   {
 	line_number++;
 	std::string line = clean_line(l) ;
+	if (line.empty()) continue;
     //std::cout<< is_directive(line) << " - " << line <<"\n";
 	int actual = get_indent(line,indent_char);
     if (is_directive(line))
