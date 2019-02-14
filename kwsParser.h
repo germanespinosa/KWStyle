@@ -206,6 +206,10 @@ public:
 
   /** Check if the file contains tabs */
   bool CheckTabs();
+  
+  std::string clean_line(std::string line);
+  
+  bool CheckDefines(const char *regex);
 
   /** Check the number of succesive empty lines */
   bool CheckEmptyLines(unsigned long max,bool checkEndOfFile=false);

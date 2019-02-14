@@ -17,8 +17,6 @@
 #include <sstream>
 namespace kws {
 
-#define ALIGN_LEFT -99999
-
 /** Extract the current line from pos to LF */
 std::string Parser::ExtractLine(size_t pos)
 {
@@ -43,31 +41,6 @@ int Parser::GetCurrentIdent(std::string line,char type)
   return indent;
 }
 
-bool check_line(std::string line, int *expected, int *actual,int *current, char indent, int size)
-{	
-	bool result = true; //passed
-	int len = line.length()-1;
-	*current = *expected; // we store the expected in current
-	*actual=0; 
-	std::cout << "\n" << *actual << "-" << len << "\n";
-	while(*actual<len)
-	{
-		if (line.at((*actual)+1)!=indent) break;
-		(*actual)++; 
-	}
-	if (len <= 0) return result; // empty line, nothing to be done
-
-	int pos=*actual+1;
-	result = *actual == *expected;
-	while(pos<len)
-	{ 
-		if (line.at(pos)=='{') *expected+=size;
-		if (line.at(pos)=='}') *expected-=size;
-		pos++;
-	}
-	return result;
-}
-
 std::string get_line ( std::string & buffer, unsigned long *pos)
 {
 	unsigned oldpos=*pos;
@@ -87,37 +60,6 @@ int get_indent(std::string line, char indent)
 	}
 }
 
-std::string clean_line(std::string line)
-{
-	int pos = line.length()-1;
-	while (pos >=0 && (line.at(pos) == '\r' || line.at(pos) == ' '))	
-	{
-		pos--;
-	}
-	std::string rt= line.substr(0,pos+1);
-	pos =0;
-	std::string result="";
-	
-	bool active=true;
-	while (pos<rt.length())
-	{
-		if( rt.at(pos) == '\"' ) active = !active;
-		if (active && rt.at(pos) != '\"') result +=  rt.at(pos);
-		pos++;
-	}
-	pos=0;
-	rt=result;
-	result="";
-	active=true;
-	while (pos<rt.length())
-	{
-		if( rt.at(pos) == '\'') active = !active;
-		if (active && rt.at(pos) != '\'') result +=  rt.at(pos);
-		pos++;
-	}
-	return result;
-}
-
 int indent_change (std::string line)
 {
 	int pos =0;
@@ -129,6 +71,11 @@ int indent_change (std::string line)
 		pos++;
 	}	
 	return result;
+}
+
+bool same_line_else_if (std::string line, int indent)
+{
+	return indent_change(line)==0 && line.at(indent)=='}';
 }
 
 bool is_directive(std::string line)
@@ -147,13 +94,13 @@ bool if_exception ( std::string line)
 {
 	return (line.find ("if") !=std::string::npos && line.find (';') ==std::string::npos);		
 }
-bool case_exception_begin ( std::string line)
+bool switch_exception_begin ( std::string line)
+{
+	return (line.find ("switch") !=std::string::npos);		
+}
+bool case_exception ( std::string line)
 {
 	return (line.find ("case") !=std::string::npos && line.find (':') !=std::string::npos);		
-}
-bool case_exception_end ( std::string line)
-{
-	return (line.find ("break") !=std::string::npos && line.find (';') !=std::string::npos);		
 }
 
 /** Check the indent size */
@@ -173,15 +120,15 @@ bool Parser::CheckIndent(IndentType itype,
   std::stringstream ss (m_BufferNoComment);
   std::string l;
   int line_number = 0;
-  int last_line_if_exception=0;
-  int case_exception=0;
+  int last_line_if_exception = 0;
+  bool last_line_switch_exception = false;
+  std::vector<int> switches_indent;
   while(std::getline(ss,l,'\n'))
   {
 	line_number++;
 	std::string line = clean_line(l) ;
 	if (line.empty()) continue;
-    //std::cout<< is_directive(line) << " - " << line <<"\n";
-	int actual = get_indent(line,indent_char);
+    int actual = get_indent(line,indent_char);
     if (is_directive(line))
     {
         int dexpected=0;
@@ -216,10 +163,19 @@ bool Parser::CheckIndent(IndentType itype,
     }
     else
     {
-		//std::cout << actual << '\t' << expected << "\t" << last_line_if_exception << "\t" << indent_change(line) << "\t" << abs(actual-expected) << ":" << line <<"\n";
+		if (switches_indent.size()) 
+		{
+			if (switches_indent.back() == actual && indent_change(line) ==-1) 
+			{
+				switches_indent.pop_back();
+				expected-=size;
+			}
+		}
         if ( (actual!=expected	&& 
 		       actual!=expected+indent_change(line) * size   &&
-		       abs(actual-expected)  > last_line_if_exception * size) )
+		       abs(actual-expected)  > last_line_if_exception * size) && 
+			  ! (same_line_else_if(line,actual) && actual ==expected - size) && 
+			  ! (case_exception(line) && actual + size == expected ))
         {
           hasError=true;
           Error error;
@@ -241,12 +197,17 @@ bool Parser::CheckIndent(IndentType itype,
         }
 		if (last_line_if_exception) last_line_if_exception--;
 		last_line_if_exception += if_exception(line);
+		if (switch_exception_begin(line)) 
+		{
+			switches_indent.push_back(expected);
+			expected+=size;
+		}
         expected+=indent_change(line) * size;
+		last_line_switch_exception=switch_exception_begin(line);
     }
   }
  return !hasError;
 }
-
 
 /** Check if the current position is a valid switch statement */
 bool Parser::CheckValidSwitchStatement(unsigned int posSwitch)

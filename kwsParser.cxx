@@ -37,6 +37,38 @@ Parser::Parser()
 
 }
 
+std::string Parser::clean_line(std::string line)
+{
+	int pos = line.length()-1;
+	while (pos >=0 && (line.at(pos) == '\r' || line.at(pos) == ' '))	
+	{
+		pos--;
+	}
+	std::string rt= line.substr(0,pos+1);
+	pos =0;
+	std::string result="";
+	
+	bool active=true;
+	while (pos<rt.length())
+	{
+		if( rt.at(pos) == '\"' ) active = !active;
+		if (active && rt.at(pos) != '\"') result +=  rt.at(pos);
+		pos++;
+	}
+	pos=0;
+	rt=result;
+	result="";
+	active=true;
+	while (pos<rt.length())
+	{
+		if( rt.at(pos) == '\'') active = !active;
+		if (active && rt.at(pos) != '\'') result +=  rt.at(pos);
+		pos++;
+	}
+	return result;
+}
+
+
 /** Destructor */
 Parser::~Parser()
 {

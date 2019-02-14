@@ -12,7 +12,6 @@
 
 =========================================================================*/
 #include "kwsParser.h"
-#include <iostream>
 
 namespace kws {
 
@@ -20,7 +19,6 @@ namespace kws {
 typedef std::pair<std::string,long int> VarDetections;
 
 std::vector<VarDetections> FindVariables(std::string & buffer);
-
 
 bool Parser::CheckVariables(const char* regEx)
 {
@@ -57,95 +55,6 @@ bool Parser::CheckVariables(const char* regEx)
         }
 	
   }
-  
-  
-  
-  return hasError;
-
-  // Do the checking
-  while(it != ivars.end())
-    {
-    std::string v = (*it).first;
-    long int p =(*it).second;
-    size_t posVar = m_BufferNoComment.find(v);
-    while(posVar != std::string::npos)
-      {
-      // Extract the complete insert of the variable
-      if(!this->IsBetweenQuote(posVar)
-        &&(
-        m_BufferNoComment[posVar-1]=='.'
-        || m_BufferNoComment[posVar-1]=='>'
-        || m_BufferNoComment[posVar-1]=='\n'
-        || m_BufferNoComment[posVar-1]==' '
-        || m_BufferNoComment[posVar-1]=='('
-        || m_BufferNoComment[posVar-1]=='['
-        )
-        &&(
-        m_BufferNoComment[posVar+v.size()]=='.'
-        || m_BufferNoComment[posVar+v.size()]=='>'
-        || m_BufferNoComment[posVar+v.size()]=='\n'
-        || m_BufferNoComment[posVar+v.size()]==' '
-        || m_BufferNoComment[posVar+v.size()]=='('
-        || m_BufferNoComment[posVar+v.size()]=='['
-        || m_BufferNoComment[posVar+v.size()]==')'
-        || m_BufferNoComment[posVar+v.size()]==']'
-        )
-        )
-        {
-
-      size_t i = posVar-1;
-      while(i>0)
-        {
-        if(m_BufferNoComment[i]==' '
-         || m_BufferNoComment[i]=='('
-         || m_BufferNoComment[i]=='['
-         || m_BufferNoComment[i]=='\n'
-         || m_BufferNoComment[i]=='!'
-         || m_BufferNoComment[i]=='{'
-         || m_BufferNoComment[i]==';'
-         || m_BufferNoComment[i]=='<'
-         || m_BufferNoComment[i]=='*'
-         )
-          {
-          break;
-          }
-        i--;
-        }
-
-      std::string var = m_BufferNoComment.substr(i+1,posVar-i+v.size()-1);
-      
-      bool showError = true;
-
-      // Check if this a macro
-      if(this->GetLineNumber(posVar,true) == p+1)
-        {
-        showError = false;
-        }
-      else
-        {
-        std::string line = this->GetLine(this->GetLineNumber(posVar,true)-1);
-        if(line.find("Macro") != std::string::npos)
-          {
-          showError = false;
-          }
-        }
-
-      // Check the regex
-      if(showError && !regex.find(var))
-        {
-        Error error;
-        error.line = this->GetLineNumber(posVar,true);
-        error.line2 = error.line;
-        error.number = VARS;
-        error.description = "variable (" + var + ") doesn't match regular expression";
-        m_ErrorList.push_back(error);
-        hasError = true;
-        }
-        }
-      posVar = m_BufferNoComment.find(v,posVar+1);
-      }
-    it++;
-    }
   return !hasError;
 }
 
@@ -160,7 +69,7 @@ bool findChar (const char* haystack ,char needle)
 
 bool isLetter(char c)
 {
-	return !findChar("&|!:{}();,\n\r #=+-*/%\"\\[]\'<>^",c);
+	return !findChar("&|!{}();,\n\r #=+-*/%\"\\[]\'<>^",c);
 }
 
 bool isBreak(char c)
@@ -172,6 +81,7 @@ bool isWord (std::string  buffer)
 {
 	if (buffer.length()==0) return false;
 	if (buffer.at(0)>='0' && buffer.at(0)<='9') return false;
+	if (buffer.find("class") != std::string::npos) return false;
 	if (buffer.find("struct") != std::string::npos) return false;
 	if (buffer.find("enum") != std::string::npos) return false;
 	if (buffer.find("const") != std::string::npos) return false;
@@ -237,7 +147,8 @@ std::vector<VarDetections>  FindVariables(std::string & buffer)
 			}
 			FWD;
 		}
-		if (isVariable)  
+		if (isVariable && variable.find(':')!=std::string::npos) isVariable=false;
+		if (isVariable)
 		{
 			VarDetections var;
 			var.first = variable;
@@ -248,103 +159,4 @@ std::vector<VarDetections>  FindVariables(std::string & buffer)
 	}
 	return result;
 }
-
-/** Find the first ivar in the source code */
-std::string Parser::FindVariable(std::string & buffer, size_t start, size_t end,size_t & pos)
-{
-  size_t lastLineStart = 0;
-  size_t posSemicolon = buffer.find(";",start);
-  while(posSemicolon != std::string::npos && posSemicolon<end)
-    {
-    // We try to find the word before that
-    //std::cout<<"line: "<<buffer.substr(lastLineStart,posSemicolon+lastLineStart)<<" : fin\n";
-    size_t i = posSemicolon-1;
-    bool inWord = true;
-    bool first = false;
-    std::string ivar = "";
-    while(i!=std::string::npos && inWord)
-      {
-      if(buffer[i] != ' ')
-        {
-        if((buffer[i] == '}')
-          || (buffer[i] == ')')
-          || (buffer[i] == ']')
-          || (buffer[i] == '\n')
-          )
-          {
-          inWord = false;
-          }
-        else
-          {
-          std::string store = ivar;
-          ivar = buffer[i];
-          ivar += store;
-          inWord = true;
-          first = true;
-          }
-        }
-      else // we have a space
-        {
-        if(first)
-          {
-          inWord = false;
-          }
-        }
-      i--;
-      }
-    pos = posSemicolon;
-    // We extract the complete definition.
-    // This means that we look for a '{' or '}' or '{' or ':'
-    // but not '::'
-    while(i != std::string::npos)
-      {
-      if(buffer[i] == ';')
-        {
-        break;
-        }
-      else if(buffer[i] == ':')
-        {
-        if((buffer[i-1] != ':') && (buffer[i+1] != ':'))
-          {
-          break;
-          }
-        }
-      i--;
-      }
-
-    std::string subphrase = "";
-
-    if(i != std::string::npos)
-      {
-      subphrase = buffer.substr(i+1,posSemicolon-i-1);
-      }
-
-    if( (subphrase.find("=") == std::string::npos)
-      && (subphrase.find("(") == std::string::npos)
-      && (subphrase.find("typedef") == std::string::npos)
-      && (subphrase.find("}") == std::string::npos)
-      && (subphrase.find("friend") == std::string::npos)
-      && (subphrase.find("class") == std::string::npos)
-      && (subphrase.find("return") == std::string::npos)
-      && (subphrase.find("\"") == std::string::npos)
-      && (subphrase.find("<<") == std::string::npos)
-      )
-      {
-      // Check that we are not inside a function(){}
-      if(!this->IsInFunction(posSemicolon,buffer.c_str())
-        && !this->IsInStruct(posSemicolon,buffer.c_str())
-        )
-        {
-        return ivar;
-        }
-      }
-	std::cout<<"line: "<<buffer.substr(lastLineStart+1,posSemicolon-lastLineStart)<<" : fin\n";
-	lastLineStart=posSemicolon;
-    posSemicolon = buffer.find(";",posSemicolon+1);
-    }
-
-  pos = std::string::npos;
-  return "";
 }
-
-} // end namespace kws
