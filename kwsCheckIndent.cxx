@@ -92,7 +92,7 @@ bool is_directive(std::string line)
 
 bool if_exception ( std::string line)
 {
-	return (line.find ("if") !=std::string::npos && line.find (';') ==std::string::npos);		
+	return ((line.find ("if") !=std::string::npos && line.find (';') ==std::string::npos)||(line.find("else")!=std::string::npos && indent_change(line)==0));
 }
 bool switch_exception_begin ( std::string line)
 {

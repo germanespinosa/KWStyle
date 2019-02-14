@@ -69,7 +69,7 @@ bool findChar (const char* haystack ,char needle)
 
 bool isLetter(char c)
 {
-	return !findChar("&|!{}();,\n\r #=+-*/%\"\\[]\'<>^",c);
+	return !findChar(".&|!{}();,\n\r #=+-*/%\"\\[]\'<>^",c);
 }
 
 bool isBreak(char c)
